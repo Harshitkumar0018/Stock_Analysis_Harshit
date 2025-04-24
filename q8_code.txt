@@ -1,0 +1,39 @@
+library(deSolve)
+library(ggplot2)
+
+sir_model <- function(time, state, parameters) {
+  with(as.list(c(state, parameters)), {
+    dS <- -beta * S * I / N
+    dI <- beta * S * I / N - gamma * I
+    dR <- gamma * I
+    return(list(c(dS, dI, dR)))
+  })
+}
+
+N <- 1000
+
+I0 <- 1
+R0 <- 0
+S0 <- N - I0 - R0
+
+beta <- 0.3 
+gamma <- 0.1 
+init_state <- c(S = S0, I = I0, R = R0)
+
+params <- c(beta = beta, gamma = gamma, N = N)
+
+times <- seq(0, 160, by = 1)
+
+sir_output <- ode(y = init_state, times = times, func = sir_model, parms = params)
+sir_df <- as.data.frame(sir_output)
+
+library(reshape2)
+sir_long <- melt(sir_df, id = "time")
+
+ggplot(data = sir_long, aes(x = time, y = value, color = variable)) +
+  geom_line(size = 1.2) +
+  labs(title = "SIR Model of Disease Spread",
+       x = "Time (days)",
+       y = "Number of People",
+       color = "Compartment") +
+  theme_minimal()

@@ -1,0 +1,51 @@
+# Load libraries
+library(dplyr)
+library(ggplot2)
+library(caret)
+library(pROC)
+
+# Simulate KR Mangalam College accountant data
+set.seed(2025)
+n <- 300
+
+krm_data <- data.frame(
+  age = sample(20:60, n, replace = TRUE),
+  monthly_income = round(runif(n, 10000, 80000), -3),
+  loan_amount = round(runif(n, 5000, 50000), -3),
+  loan_term = sample(c(6, 12, 18, 24, 36), n, replace = TRUE),
+  is_staff = sample(0:1, n, replace = TRUE, prob = c(0.7, 0.3))  # 70% students, 30% staff
+)
+
+# Simulate default based on risk factors
+krm_data$default <- with(krm_data, rbinom(n, 1, prob = 0.1 + 0.002 * (loan_amount/monthly_income) + 0.05 * (1 - is_staff)))
+
+# Explore data
+glimpse(krm_data)
+ggplot(krm_data, aes(x = monthly_income, fill = factor(default))) +
+  geom_histogram(position = "dodge", bins = 30) +
+  labs(title = "Income Distribution by Default Status", fill = "Default")
+
+
+set.seed(42)
+train_index <- createDataPartition(krm_data$default, p = 0.7, list = FALSE)
+train_krm <- krm_data[train_index, ]
+test_krm <- krm_data[-train_index, ]
+
+
+logit_model <- glm(default ~ age + monthly_income + loan_amount + loan_term + is_staff,
+                   data = train_krm, family = binomial)
+
+summary(logit_model)
+
+
+test_probs <- predict(logit_model, newdata = test_krm, type = "response")
+test_pred <- ifelse(test_probs > 0.5, 1, 0)
+
+
+conf_matrix <- confusionMatrix(factor(test_pred), factor(test_krm$default), positive = "1")
+print(conf_matrix)
+
+roc_obj <- roc(test_krm$default, test_probs)
+plot(roc_obj, col = "red", main = "ROC Curve for Loan Default Prediction")
+auc(roc_obj)
+

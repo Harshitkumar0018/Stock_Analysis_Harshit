@@ -1,0 +1,73 @@
+install.packages(c("ggplot2", "forecast", "tsibble", "fable", "tseries"))
+
+library(ggplot2)
+library(forecast)
+library(tsibble)
+library(fable)
+library(tseries)
+
+library(quantmod)
+getSymbols("AAPL", src = "yahoo", from = "2010-01-01", to = Sys.Date())
+
+head(AAPL)
+
+ggplot(data = AAPL, aes(x = index(AAPL), y = AAPL$AAPL.Adjusted)) +
+  geom_line() +
+  labs(title = "Apple Stock Price", x = "Date", y = "Adjusted Price")
+
+aapl_ts <- ts(AAPL$AAPL.Adjusted, frequency = 252)  # Using frequency = 252 for daily stock data (trading days in a year)
+
+plot(aapl_ts, main = "Apple Stock Price Time Series", ylab = "Adjusted Price", xlab = "Time")
+
+adf_test <- adf.test(aapl_ts)
+print(adf_test)
+
+
+if(adf_test$p.value > 0.05) {
+  aapl_ts_diff <- diff(aapl_ts)  # Apply differencing
+  plot(aapl_ts_diff, main = "Differenced Apple Stock Price")
+}
+
+
+arima_model <- auto.arima(aapl_ts)
+summary(arima_model)
+
+
+plot(forecast(arima_model, h = 30))  
+
+ets_model <- ets(aapl_ts)
+summary(ets_model)
+
+
+plot(forecast(ets_model, h = 30)) 
+
+
+
+
+
+SUMMARY(ets_model)
+
+
+ETS(M,A,N) 
+
+Call:
+ets(y = aapl_ts)
+
+  Smoothing parameters:
+    alpha = 0.9549 
+    beta  = 5e-04 
+
+  Initial states:
+    l = 6.4214 
+    b = 0.0161 
+
+  sigma:  0.0179
+
+     AIC     AICc      BIC 
+29576.07 29576.09 29607.35 
+
+Training set error measures:
+                    ME     RMSE       MAE         MPE     MAPE       MASE
+Training set 0.0203052 1.784914 0.9131034 0.005096845 1.253382 0.05339797
+                   ACF1
+Training set 0.03236371
